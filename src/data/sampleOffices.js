@@ -1,0 +1,38 @@
+export const sampleOffices = [
+  {
+    id: "registrar",
+    name: "Registrar",
+    description: "Enrollment, records, and certificates",
+    status: "Open",
+    hours: "8:00 AM - 5:00 PM",
+    requirements: ["Valid school ID", "Clearance form (for records requests)"],
+    services: ["Enrollment", "Request for Transcript", "Certificate of Enrollment"],
+  },
+  {
+    id: "cashier",
+    name: "Cashier",
+    description: "Tuition and other school payments",
+    status: "On Break",
+    hours: "8:00 AM - 4:30 PM (Break: 12:00 - 1:00 PM)",
+    requirements: ["Valid school ID", "Assessment of fees"],
+    services: ["Tuition Payment", "Other Fees", "Official Receipt Request"],
+  },
+  {
+    id: "clinic",
+    name: "Clinic",
+    description: "Health services and medical certificates",
+    status: "Open",
+    hours: "7:30 AM - 5:00 PM",
+    requirements: ["Valid school ID"],
+    services: ["Consultation", "Medical Certificate"],
+  },
+  {
+    id: "guidance",
+    name: "Guidance Office",
+    description: "Counseling and student support",
+    status: "Closed",
+    hours: "9:00 AM - 4:00 PM",
+    requirements: ["Valid school ID", "Appointment slip (if any)"],
+    services: ["Counseling", "Good Moral Certificate"],
+  },
+];

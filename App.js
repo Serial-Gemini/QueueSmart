@@ -1,20 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import HomeScreen from "./src/screens/HomeScreen";
+import OfficeDetailScreen from "./src/screens/OfficeDetailScreen";
 
 export default function App() {
+  const [selectedOffice, setSelectedOffice] = useState(null);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <StatusBar style="dark" />
+      {selectedOffice ? (
+        <OfficeDetailScreen
+          office={selectedOffice}
+          onBack={() => setSelectedOffice(null)}
+        />
+      ) : (
+        <HomeScreen onSelectOffice={setSelectedOffice} />
+      )}
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
