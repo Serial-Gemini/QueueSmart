@@ -10,14 +10,14 @@ export default function useOffices() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const useSample = () => {
+    const loadSample = () => {
       setOffices(sampleOffices);
       setSource("sample");
       setLoading(false);
     };
 
     if (!isFirebaseConfigured) {
-      useSample();
+      loadSample();
       return;
     }
 
@@ -25,21 +25,21 @@ export default function useOffices() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         if (list.length === 0) {
-          useSample();
+          loadSample();
         } else {
           setOffices(list);
           setSource("firebase");
+          setError(null);
           setLoading(false);
         }
       },
       (err) => {
         setError(err.message);
-        useSample();
+        loadSample();
       }
     );
-
     return unsubscribe;
   }, []);
 

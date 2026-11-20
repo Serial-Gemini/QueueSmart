@@ -1,42 +1,46 @@
-import {
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-  Platform,
-  StatusBar,
-  StyleSheet,
-} from "react-native";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OfficeCard from "../components/OfficeCard";
+import PrimaryButton from "../components/PrimaryButton";
 import useOffices from "../hooks/useOffices";
+import { useAuth } from "../context/AuthContext";
 import { colors, spacing } from "../theme";
 
-export default function HomeScreen({ onSelectOffice }) {
+export default function HomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const { profile } = useAuth();
   const { offices, loading, source, error } = useOffices();
+  const firstName = profile?.fullName?.split(" ")[0];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>QueueSmart</Text>
-      <Text style={styles.subtitle}>Choose an office to see details</Text>
-
-      <View style={styles.banner}>
-        <Text style={styles.bannerText}>
-          {source === "firebase"
-            ? "Live data from Firebase"
-            : "Showing sample data (Firebase not connected yet)"}
-        </Text>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <Text style={styles.hello}>{firstName ? `Hello, ${firstName}` : "Welcome"}</Text>
+        <Text style={styles.title}>Campus Offices</Text>
+        <Text style={styles.subtitle}>Pick an office, or scan its QR code to get a queue number.</Text>
+        <PrimaryButton title="Scan QR Code" icon="qr-code-outline" variant="gold" onPress={() => navigation.navigate("Scan")} />
       </View>
-      {error ? <Text style={styles.error}>Firebase error: {error}</Text> : null}
 
       {loading ? (
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.lg }} />
       ) : (
         <FlatList
           data={offices}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <OfficeCard office={item} onPress={() => onSelectOffice(item)} />
+            <OfficeCard office={item} onPress={() => navigation.navigate("OfficeDetails", { officeId: item.id })} />
           )}
+          ListHeaderComponent={
+            <>
+              {source === "sample" ? (
+                <View style={styles.banner}>
+                  <Text style={styles.bannerText}>Showing sample data (no offices found in Firebase yet)</Text>
+                </View>
+              ) : null}
+              {error ? <Text style={styles.error}>Firebase error: {error}</Text> : null}
+            </>
+          }
+          ListEmptyComponent={<Text style={styles.empty}>No offices available right now.</Text>}
           contentContainerStyle={styles.list}
         />
       )}
@@ -44,25 +48,18 @@ export default function HomeScreen({ onSelectOffice }) {
   );
 }
 
-const topPadding =
-  Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 12 : 56;
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: topPadding,
-    paddingHorizontal: spacing.md,
+  container: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingBottom: spacing.lg,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
-  title: { fontSize: 28, fontWeight: "bold", color: colors.primary },
-  subtitle: { fontSize: 15, color: colors.muted, marginBottom: spacing.md },
-  banner: {
-    backgroundColor: colors.primaryLight,
-    padding: spacing.sm,
-    borderRadius: 8,
-    marginBottom: spacing.md,
-  },
-  bannerText: { fontSize: 12, color: colors.primary },
+  hello: { fontSize: 14, color: colors.goldLight },
+  title: { fontSize: 26, fontWeight: "bold", color: "#ffffff" },
+  subtitle: { fontSize: 14, color: "#d7eadf", marginBottom: spacing.md, marginTop: 2 },
+  list: { padding: spacing.md, paddingBottom: spacing.lg },
+  banner: { backgroundColor: colors.goldLight, padding: spacing.sm, borderRadius: 8, marginBottom: spacing.md },
+  bannerText: { fontSize: 12, color: colors.primaryDark },
   error: { color: colors.closed, fontSize: 12, marginBottom: spacing.sm },
-  list: { paddingBottom: spacing.lg },
+  empty: { textAlign: "center", color: colors.muted, marginTop: spacing.lg },
 });

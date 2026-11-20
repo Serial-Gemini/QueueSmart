@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isAdminOf(officeId) { return signedIn() && me().role == 'admin' && me().officeId == officeId; }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'student'
+        && request.auth.token.email.matches('.*@cvsu[.]edu[.]ph$');
+      allow update, delete: if false;
+    }
+
+    // Create-only lock. If the doc exists, a second create counts as an update and is denied.
+    match /studentNumbers/{num} {
+      allow read: if false;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /offices/{officeId} {
+      allow read: if signedIn();
+      allow update: if isAdminOf(officeId)
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastNumber']));
+      allow create, delete: if false;
+
+      match /tickets/{ticketId} {
+        allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdminOf(officeId));
+        allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+                      && request.resource.data.status == 'waiting';
+        allow update: if isAdminOf(officeId)
+          || (resource.data.uid == request.auth.uid && request.resource.data.status == 'cancelled');
+      }
+    }
+
+    match /activeTickets/{id} {
+      // resource == null lets the join transaction check "does my lock exist?" safely
+      allow read: if signedIn() && (resource == null
+        || resource.data.uid == request.auth.uid
+        || isAdminOf(resource.data.officeId));
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdminOf(resource.data.officeId));
+    }
+  }
+}

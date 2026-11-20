@@ -5,6 +5,7 @@ const statusColor = {
   Open: colors.open,
   "On Break": colors.break,
   Closed: colors.closed,
+  Paused: colors.paused,
 };
 
 export default function StatusBadge({ status }) {
@@ -23,9 +24,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignSelf: "flex-start",
   },
-  text: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
+  text: { color: "#ffffff", fontSize: 12, fontWeight: "bold" },
 });
