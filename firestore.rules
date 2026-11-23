@@ -13,7 +13,6 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Create-only lock. If the doc exists, a second create counts as an update and is denied.
     match /studentNumbers/{num} {
       allow read: if false;
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;

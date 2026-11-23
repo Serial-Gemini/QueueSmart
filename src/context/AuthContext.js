@@ -46,7 +46,6 @@ export function AuthProvider({ children }) {
     return () => { unsubProfile(); unsubAuth(); };
   }, []);
 
-  // The role that is allowed into the app right now (null = show login screens)
   const role =
     !busy && user && profile && (profile.role !== "student" || user.emailVerified)
       ? profile.role

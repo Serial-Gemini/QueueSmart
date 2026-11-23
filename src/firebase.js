@@ -1,31 +1,33 @@
-import { Platform } from "react-native";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { initializeAuth, getAuth, getReactNativePersistence } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyD2CO_9oegbl7LIstarsfFNUakrX1B-n7Y",
+  authDomain: "queuesmart-b2f88.firebaseapp.com",
+  projectId: "queuesmart-b2f88",
+  storageBucket: "queuesmart-b2f88.firebasestorage.app",
+  messagingSenderId: "157857958458",
+  appId: "1:157857958458:web:77e2923edf6f880aba0303",
+  measurementId: "G-TDVJ00W55E"
 };
 
-export const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-let app = null;
-let auth = null;
-if (isFirebaseConfigured) {
-  const existing = getApps().length > 0;
-  app = existing ? getApp() : initializeApp(firebaseConfig);
-  if (existing || Platform.OS === "web") {
-    auth = getAuth(app);
-  } else {
-    auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
-  }
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch {
+
+  auth = getAuth(app);
+
 }
 
+export const db = getFirestore(app);
 export { auth };
-export const db = app ? getFirestore(app) : null;
+export default app;
