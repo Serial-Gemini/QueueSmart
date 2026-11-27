@@ -6,6 +6,12 @@ const statusColor = {
   "On Break": colors.break,
   Closed: colors.closed,
   Paused: colors.paused,
+  Waiting: colors.primary,
+  "Almost Your Turn": colors.break,
+  "Now Serving": colors.open,
+  Completed: colors.primaryDark,
+  Cancelled: colors.closed,
+  Skipped: colors.paused,
 };
 
 export default function StatusBadge({ status }) {

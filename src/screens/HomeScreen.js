@@ -5,12 +5,15 @@ import PrimaryButton from "../components/PrimaryButton";
 import useOffices from "../hooks/useOffices";
 import { useAuth } from "../context/AuthContext";
 import { colors, spacing } from "../theme";
+import ActiveTicketCard from "../components/ActiveTicketCard";
+import { useTicket } from "../context/TicketContext";
 
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const { offices, loading, source, error } = useOffices();
   const firstName = profile?.fullName?.split(" ")[0];
+  const { items = [] } = useTicket() || {};
 
   return (
     <View style={styles.container}>
@@ -32,6 +35,13 @@ export default function HomeScreen({ navigation }) {
           )}
           ListHeaderComponent={
             <>
+            {items.map((it) => (
+  <ActiveTicketCard
+    key={it.id}
+    item={it}
+    onPress={() => navigation.navigate("Ticket", { officeId: it.officeId, ticketId: it.id })}
+  />
+))}
               {source === "sample" ? (
                 <View style={styles.banner}>
                   <Text style={styles.bannerText}>Showing sample data (no offices found in Firebase yet)</Text>

@@ -65,6 +65,7 @@ export default function AdminQrScreen() {
               {office.qrActive ? "ACTIVE" : "INACTIVE"}
             </Text>
             <Text style={styles.caption}>Students scan this to get a queue number. It never contains a number itself.</Text>
+            {value ? <Text selectable style={styles.caption}>{value}</Text> : null}
           </View>
 
           <PrimaryButton title={office.qrActive ? "Deactivate QR" : "Activate QR"} icon={office.qrActive ? "close-circle-outline" : "checkmark-circle-outline"}

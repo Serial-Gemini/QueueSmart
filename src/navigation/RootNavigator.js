@@ -15,6 +15,8 @@ import ScanScreen from "../screens/ScanScreen";
 import AccountScreen from "../screens/AccountScreen";
 import AdminQueueScreen from "../screens/AdminQueueScreen";
 import AdminQrScreen from "../screens/AdminQrScreen";
+import TicketScreen from "../screens/TicketScreen";
+import { TicketProvider } from "../context/TicketContext";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,6 +56,7 @@ function StudentStack() {
       <Stack.Screen name="Tabs" component={StudentTabs} />
       <Stack.Screen name="OfficeDetails" component={OfficeDetailsScreen} />
       <Stack.Screen name="Scan" component={ScanScreen} />
+      <Stack.Screen name="Ticket" component={TicketScreen} />
     </Stack.Navigator>
   );
 }
@@ -92,7 +95,7 @@ export default function RootNavigator() {
   }
 
   // Role-based access: each role only ever gets its own navigator
-  if (role === "student") return <StudentStack />;
+  if (role === "student") return <TicketProvider><StudentStack /></TicketProvider>;
   if (role === "admin") return <AdminTabs />;
   return <AuthStack />;
 }

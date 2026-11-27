@@ -11,13 +11,17 @@ export default function useAdminQueue(officeId) {
   const exists = !!office;
 
   useEffect(() => {
-    if (!officeId) { setLoading(false); return; }
-    return onSnapshot(
-      doc(db, "offices", officeId),
-      (snap) => { setOffice(snap.exists() ? { id: snap.id, ...snap.data() } : null); setLoading(false); },
-      (e) => { setError(e.message); setLoading(false); }
-    );
-  }, [officeId]);
+  setOffice(null);
+  setTickets([]);
+  setError(null);
+  if (!officeId) { setLoading(false); return; }
+  setLoading(true);
+  return onSnapshot(
+    doc(db, "offices", officeId),
+    (snap) => { setOffice(snap.exists() ? { id: snap.id, ...snap.data() } : null); setLoading(false); },
+    (e) => { setError(e.message); setLoading(false); }
+  );
+}, [officeId]);
 
   useEffect(() => {
     if (!officeId || !exists) return;
