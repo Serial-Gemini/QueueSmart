@@ -1,9 +1,11 @@
+import { Platform } from "react-native";
 import { createContext, useContext, useEffect, useState } from "react";
 import {
   onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   sendEmailVerification, sendPasswordResetEmail, signOut,
+  GoogleAuthProvider, signInWithPopup,
 } from "firebase/auth";
-import { doc, getDoc, writeBatch, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, writeBatch, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
@@ -21,6 +23,12 @@ const AUTH_MESSAGES = {
   "auth/too-many-requests": "Too many attempts. Please wait a few minutes and try again.",
   "auth/network-request-failed": "No internet connection. Please try again.",
   "auth/weak-password": "Password is too weak. Use at least 8 characters.",
+  "auth/popup-closed-by-user": "Sign-in was cancelled.",
+  "auth/cancelled-popup-request": "Sign-in was cancelled.",
+  "auth/popup-blocked": "Your browser blocked the sign-in popup. Allow popups for this site and try again.",
+  "auth/unauthorized-domain": "This domain isn't authorized in Firebase. Use localhost:8081 or add the domain under Authentication → Settings → Authorized domains.",
+  "auth/operation-not-allowed": "Google sign-in isn't enabled yet in the Firebase console.",
+  "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method.",
 };
 export const friendlyError = (e) => AUTH_MESSAGES[e?.code] || e?.message || "Something went wrong.";
 
@@ -39,7 +47,17 @@ export function AuthProvider({ children }) {
       if (!u) { setProfile(null); setLoading(false); return; }
       unsubProfile = onSnapshot(
         doc(db, "users", u.uid),
-        (snap) => { setProfile(snap.exists() ? snap.data() : null); setLoading(false); },
+        (snap) => {
+          const data = snap.exists() ? snap.data() : null;
+          if (data?.role === "admin") {
+            // Revocation check: an admin must still be on the allowlist
+            getDoc(doc(db, "adminEmails", (u.email || "").toLowerCase()))
+              .then((a) => { if (!a.exists()) signOut(auth); })
+              .catch(() => {});
+          }
+          setProfile(data);
+          setLoading(false);
+        },
         () => setLoading(false)
       );
     });
@@ -109,11 +127,67 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Admin sign-in for testing: Google account + allowlist check (adminEmails/{email})
+  const loginWithGoogle = async () => {
+    if (Platform.OS !== "web") {
+      throw new Error("Google sign-in currently works in the web version only. Open QueueSmart in your browser (localhost:8081) to test the admin side.");
+    }
+    setBusy(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      const cred = await signInWithPopup(auth, provider);
+      const email = (cred.user.email || "").toLowerCase();
+
+      let entry;
+      try {
+        entry = await getDoc(doc(db, "adminEmails", email));
+      } catch {
+        await signOut(auth);
+        throw new Error("Couldn't check the administrator list. Make sure the latest Firestore rules are published.");
+      }
+      if (!entry.exists()) {
+        await signOut(auth);
+        throw new Error(`${email} is not authorized as an office administrator.`);
+      }
+      const info = entry.data();
+      if (!info.officeId) {
+        await signOut(auth);
+        throw new Error("This administrator entry has no officeId. Ask the QueueSmart team to fix it.");
+      }
+
+      const userRef = doc(db, "users", cred.user.uid);
+      const existing = await getDoc(userRef);
+      if (existing.exists() && existing.data().role !== "admin") {
+        await signOut(auth);
+        throw new Error("This Google account is linked to a student account and can't be used as an administrator.");
+      }
+      if (!existing.exists()) {
+        try {
+          await setDoc(userRef, {
+            role: "admin",
+            email,
+            fullName: info.fullName || cred.user.displayName || email,
+            officeId: info.officeId,
+            createdAt: serverTimestamp(),
+          });
+        } catch {
+          await signOut(auth);
+          throw new Error("Couldn't create the administrator profile. Check that the Firestore rules are published.");
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const resetPassword = (email) => sendPasswordResetEmail(auth, email.trim().toLowerCase());
   const logout = () => (auth ? signOut(auth) : Promise.resolve());
 
   return (
-    <AuthContext.Provider value={{ user, profile, role, loading, registerStudent, login, resetPassword, logout }}>
+    <AuthContext.Provider
+      value={{ user, profile, role, loading, registerStudent, login, loginWithGoogle, resetPassword, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -2,15 +2,35 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function emailVerified() { return signedIn() && request.auth.token.email_verified == true; }
     function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function isAdminOf(officeId) { return signedIn() && me().role == 'admin' && me().officeId == officeId; }
+    function isAdminOf(officeId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/adminEmails/$(request.auth.token.email))
+        && me().role == 'admin' && me().officeId == officeId;
+    }
+
+    // Allowlist of testing admins. Managed in the console only.
+    match /adminEmails/{email} {
+      allow get: if emailVerified() && email == request.auth.token.email;
+      allow list, create, update, delete: if false;
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid
-        && request.resource.data.role == 'student'
-        && request.auth.token.email.matches('.*@cvsu[.]edu[.]ph$');
-      allow update, delete: if false;
+      allow create: if signedIn() && request.auth.uid == uid && (
+        ( request.resource.data.role == 'student'
+          && request.auth.token.email.matches('.*@cvsu[.]edu[.]ph$') )
+        ||
+        ( request.resource.data.role == 'admin'
+          && emailVerified()
+          && request.resource.data.keys().hasOnly(['role','email','fullName','officeId','createdAt'])
+          && exists(/databases/$(database)/documents/adminEmails/$(request.auth.token.email))
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.officeId ==
+             get(/databases/$(database)/documents/adminEmails/$(request.auth.token.email)).data.officeId )
+      );
+      allow update, delete: if false; // nobody can change their own role
     }
 
     match /studentNumbers/{num} {
@@ -21,7 +41,9 @@ service cloud.firestore {
     match /offices/{officeId} {
       allow read: if signedIn();
       allow update: if isAdminOf(officeId)
-        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastNumber']));
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastNumber'])
+            && request.resource.data.lastNumber == resource.data.lastNumber + 1);
       allow create, delete: if false;
 
       match /tickets/{ticketId} {
@@ -34,7 +56,6 @@ service cloud.firestore {
     }
 
     match /activeTickets/{id} {
-      // resource == null lets the join transaction check "does my lock exist?" safely
       allow read: if signedIn() && (resource == null
         || resource.data.uid == request.auth.uid
         || isAdminOf(resource.data.officeId));

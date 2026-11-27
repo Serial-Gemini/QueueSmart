@@ -8,7 +8,7 @@ import { useAuth, friendlyError } from "../context/AuthContext";
 import { colors, radius, spacing } from "../theme";
 
 export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [role, setRole] = useState("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +20,19 @@ export default function LoginScreen({ navigation }) {
     if (!email.trim() || !password) { setError("Enter your email and password."); return; }
     setSubmitting(true);
     try {
-      await login(email, password, role);
+      await login(email, password, "student");
+    } catch (e) {
+      setError(friendlyError(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitGoogle = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      await loginWithGoogle();
     } catch (e) {
       setError(friendlyError(e));
     } finally {
@@ -43,31 +55,44 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       <Notice>{error}</Notice>
-      <Field
-        label={role === "student" ? "CvSU Email" : "Admin Email"}
-        value={email}
-        onChangeText={setEmail}
-        placeholder={role === "student" ? "juan.delacruz@cvsu.edu.ph" : "office@cvsu.edu.ph"}
-        keyboardType="email-address"
-      />
-      <Field label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry />
-
-      <Pressable onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
-        <Text style={styles.link}>Forgot password?</Text>
-      </Pressable>
-
-      <PrimaryButton title="Sign In" onPress={submit} loading={submitting} />
 
       {role === "student" ? (
-        <Pressable onPress={() => navigation.navigate("Register")} style={styles.bottom}>
-          <Text style={styles.muted}>
-            New student? <Text style={styles.link}>Create an account</Text>
-          </Text>
-        </Pressable>
+        <>
+          <Field
+            label="CvSU Email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="juan.delacruz@cvsu.edu.ph"
+            keyboardType="email-address"
+          />
+          <Field label="Password" value={password} onChangeText={setPassword} placeholder="Your password" secureTextEntry />
+
+          <Pressable onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgot}>
+            <Text style={styles.link}>Forgot password?</Text>
+          </Pressable>
+
+          <PrimaryButton title="Sign In" onPress={submit} loading={submitting} />
+
+          <Pressable onPress={() => navigation.navigate("Register")} style={styles.bottom}>
+            <Text style={styles.muted}>
+              New student? <Text style={styles.link}>Create an account</Text>
+            </Text>
+          </Pressable>
+        </>
       ) : (
-        <Text style={[styles.muted, styles.bottom]}>
-          Office admin accounts are issued by the university's system administrator.
-        </Text>
+        <>
+          <Text style={styles.adminText}>
+            Office administrators sign in with an authorized Google account. Only accounts approved by the
+            QueueSmart team can open the admin dashboard.
+          </Text>
+          <PrimaryButton
+            title="Continue with Google"
+            icon="logo-google"
+            variant="outline"
+            onPress={submitGoogle}
+            loading={submitting}
+          />
+        </>
       )}
     </AuthLayout>
   );
@@ -84,6 +109,7 @@ const styles = StyleSheet.create({
   segTextActive: { color: "#ffffff" },
   forgot: { alignSelf: "flex-end", marginBottom: spacing.md },
   link: { color: colors.primary, fontWeight: "bold", fontSize: 14 },
-  bottom: { marginTop: spacing.lg, alignItems: "center", textAlign: "center" },
+  bottom: { marginTop: spacing.lg, alignItems: "center" },
   muted: { color: colors.muted, fontSize: 14, textAlign: "center" },
+  adminText: { color: colors.muted, fontSize: 14, marginBottom: spacing.lg },
 });
